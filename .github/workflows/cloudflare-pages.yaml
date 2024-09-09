@@ -1,0 +1,22 @@
+name: deploy contents to cloudflare pages
+on:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+jobs:
+  cloudflare-pages:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: Songmu/podbard@v0
+    - run: podbard build
+    - uses: cloudflare/pages-action@v1
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        projectName: <your-project-name>
+        directory: public

@@ -1,0 +1,12 @@
+channel:
+  link: https://junkyard.song.mu/podbard-starter/
+  title: podbard starter
+  description: podbard starter
+  language: ja-JP
+  category: "Techlogy"
+  author: Songmu
+  email: y.songmu@gmail.com
+  artwork: "images/artwork.jpg" # url or path
+
+timezone: Asia/Tokyo
+audio_bucket_url: https://r2.dev.example.com/audio/
