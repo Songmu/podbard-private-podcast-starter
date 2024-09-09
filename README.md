@@ -20,6 +20,14 @@ This is a template repository for creating a podcast site with [podbard](https:/
 
 This template is designed to upload page content to Cloudflare Pages and audio files to Cloudflare R2. Look at the GitHub Actions workflow files under the .github directory and set the necessary values.
 
+## Basic Authentication Settings
+
+This template uses Basic Authentication for private podcasting. The Basic Authentication user and password can be set by entering a value such as `PASSWORD_FOO` in the Cloudflare Pages environment variable. In this case, the password for the foo user will be the value you set. You can subscribe to the podcast at the feed URL such as `https://foo:password@yourpodcast.example.com/feed.xml`. Check `static/functions/_middlewares.ts` for implementation details.
+
+Note: This basic authentication is not perfect for privatization. It can be directly retrieved if the audio file URL is compromised. However, we believe this method is relatively reasonable.
+
+## Customization
+
 You can manage the podcast site with the `podbard` command for more customization.
 
 See. <https://github.com/Songmu/podbard> for more details.
