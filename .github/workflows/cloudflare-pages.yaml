@@ -13,7 +13,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: Songmu/podbard@v0
-    - run: podbard build
+    - run: |
+        podbard build
+        cp -r functions/ public/functions/
     - uses: cloudflare/pages-action@v1
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
