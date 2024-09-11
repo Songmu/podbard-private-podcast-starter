@@ -18,8 +18,7 @@ jobs:
         parents: true
     - name: Copy cloudflare page settings
       run: |
-        cp cfpages/_headers public/_headers
-        cp -r functions/ public/functions/
+        cp -r cfpages/* public/
     - uses: cloudflare/pages-action@v1
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
