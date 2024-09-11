@@ -12,9 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: Songmu/podbard@v0
-    - run: |
-        podbard build
+    - name: Install podbard and build site
+      uses: Songmu/podbard@v0
+      with:
+        parents: true
+    - name: Copy cloudflare page settings
+      run: |
+        cp cfpages/_headers public/_headers
         cp -r functions/ public/functions/
     - uses: cloudflare/pages-action@v1
       with:
