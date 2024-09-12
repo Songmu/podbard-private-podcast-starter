@@ -63,16 +63,51 @@ const basicAuth: Middleware = async ({ request, next, env }: EventContext): Prom
 
   const username = decoded.substring(0, index);
   const password = decoded.substring(index + 1);
+  if (password === "") {
+    return new Response("Password is empty.", {
+      status: 401,
+    });
+  }
 
   const key = passEnvPrefix + username.toUpperCase();
   const storedPassword = env[key];
-
-  if (typeof storedPassword !== "string" || password !== storedPassword) {
+  // Do constant time comparison.
+  // If the user does not exist, there will not be a constant time comparison so that somebody
+  // may reveal the presence or absence of a user, but it is acceptable for now.
+  if (typeof storedPassword != "string" || !(await compareStrings(password, storedPassword))) {
     return new Response("Invalid username or password.", {
       status: 401,
     });
   }
   return await next();
 };
+
+async function sha256(str: string): Promise<ArrayBuffer> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  return crypto.subtle.digest("SHA-256", data);
+}
+
+function constantTimeCompare(hashA: ArrayBuffer, hashB: ArrayBuffer): boolean {
+  const bufA = new Uint8Array(hashA);
+  const bufB = new Uint8Array(hashB);
+
+  let result = bufA.length ^ bufB.length;
+  const len = Math.max(bufA.length, bufB.length);
+  for (let i = 0; i < len; i++) {
+    const byteA = i < bufA.length ? bufA[i] : 0;
+    const byteB = i < bufB.length ? bufB[i] : 0;
+    const tmp = byteA ^ byteB;
+    result |= tmp;
+  }
+  return result === 0;
+}
+
+async function compareStrings(a: string, b: string): Promise<boolean> {
+  const hashA = await sha256(a);
+  const hashB = await sha256(b);
+
+  return constantTimeCompare(hashA, hashB);
+}
 
 export const onRequest: Middlewares = [errorHandler, basicAuth];
