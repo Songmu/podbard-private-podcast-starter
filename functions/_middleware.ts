@@ -71,14 +71,13 @@ const basicAuth: Middleware = async ({ request, next, env }: EventContext): Prom
 
   const key = passEnvPrefix + username.toUpperCase();
   const storedPassword = env[key];
-  // Do constant time comparison.
-  // If the user does not exist, there will not be a constant time comparison so that somebody
-  // may reveal the presence or absence of a user, but it is acceptable for now.
-  if (typeof storedPassword != "string" || !(await compareStrings(password, storedPassword))) {
+  // Do constant-time comparison to prevent timing attacks
+  if (!(await compareStrings(password, typeof storedPassword === "string" ? storedPassword : undefined))) {
     return new Response("Invalid username or password.", {
       status: 401,
     });
   }
+
   return await next();
 };
 
@@ -88,26 +87,25 @@ async function sha256(str: string): Promise<ArrayBuffer> {
   return crypto.subtle.digest("SHA-256", data);
 }
 
-function constantTimeCompare(hashA: ArrayBuffer, hashB: ArrayBuffer): boolean {
+function constantTimeCompare(hashA: ArrayBuffer, hashB: ArrayBuffer, acc = 0): boolean {
   const bufA = new Uint8Array(hashA);
   const bufB = new Uint8Array(hashB);
 
-  let result = bufA.length ^ bufB.length;
+  acc |= bufA.length ^ bufB.length;
   const len = Math.max(bufA.length, bufB.length);
   for (let i = 0; i < len; i++) {
     const byteA = i < bufA.length ? bufA[i] : 0;
     const byteB = i < bufB.length ? bufB[i] : 0;
-    const tmp = byteA ^ byteB;
-    result |= tmp;
+    acc |= byteA ^ byteB;
   }
-  return result === 0;
+  return acc === 0;
 }
 
-async function compareStrings(a: string, b: string): Promise<boolean> {
+async function compareStrings(a: string, b: string | undefined): Promise<boolean> {
   const hashA = await sha256(a);
-  const hashB = await sha256(b);
+  const hashB = await sha256(b !== undefined ? b : "dummy");
 
-  return constantTimeCompare(hashA, hashB);
+  return constantTimeCompare(hashA, hashB, b !== undefined ? 0 : 1);
 }
 
 export const onRequest: Middlewares = [errorHandler, basicAuth];
