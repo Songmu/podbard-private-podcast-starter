@@ -71,8 +71,11 @@ const basicAuth: Middleware = async ({ request, next, env }: EventContext): Prom
 
   const key = passEnvPrefix + username.toUpperCase();
   const storedPassword = env[key];
-  // Do constant-time comparison to prevent timing attacks
-  if (!(await compareStrings(password, typeof storedPassword === "string" ? storedPassword : undefined))) {
+  const userExists = typeof storedPassword === "string";
+  // Even if the user does not exist, a constant time comparison with a dummy string is performed
+  // to prevent timing attacks.
+  const matchPassword = await compareStrings(password, userExists ? storedPassword : "dummy");
+  if (!userExists || !matchPassword) {
     return new Response("Invalid username or password.", {
       status: 401,
     });
@@ -87,25 +90,18 @@ async function sha256(str: string): Promise<ArrayBuffer> {
   return crypto.subtle.digest("SHA-256", data);
 }
 
-function constantTimeCompare(hashA: ArrayBuffer, hashB: ArrayBuffer, acc = 0): boolean {
-  const bufA = new Uint8Array(hashA);
-  const bufB = new Uint8Array(hashB);
-
-  acc |= bufA.length ^ bufB.length;
-  const len = Math.max(bufA.length, bufB.length);
-  for (let i = 0; i < len; i++) {
-    const byteA = i < bufA.length ? bufA[i] : 0;
-    const byteB = i < bufB.length ? bufB[i] : 0;
-    acc |= byteA ^ byteB;
-  }
-  return acc === 0;
-}
-
-async function compareStrings(a: string, b: string | undefined): Promise<boolean> {
+async function compareStrings(a: string, b: string): Promise<boolean> {
   const hashA = await sha256(a);
-  const hashB = await sha256(b !== undefined ? b : "dummy");
+  const hashB = await sha256(b);
 
-  return constantTimeCompare(hashA, hashB, b !== undefined ? 0 : 1);
+  // The buffer lengths must be the same, and they were aligned to the same length by hashing,
+  // but we are checking to be sure because timeSafeEqual will throw an exception if the lengths
+  // are different.
+  // ref. https://developers.cloudflare.com/workers/examples/protect-against-timing-attacks/
+  if (hashA.byteLength !== hashB.byteLength) {
+    return false;
+  }
+  return crypto.subtle.timingSafeEqual(hashA, hashB);
 }
 
 export const onRequest: Middlewares = [errorHandler, basicAuth];
